@@ -1,0 +1,17 @@
+ mkdir -p projects/todo_list
+cd projects/todo_list
+python -m venv venv
+source venv/bin/activate
+python3 -m pip install django
+python3 main.py
+python -m pip freeze > requirements.txt
+django-admin startproject todo_project .
+django-admin startapp todo_app
+
+python manage.py makemigrations todo_app
+python manage.py migrate
+python manage.py createsuperuser
+# michelescarlato
+# michele.scarlato@gmail.com
+# nutella123
+python3 manage.py runserver
