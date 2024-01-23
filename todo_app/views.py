@@ -1,4 +1,4 @@
-from django.shortcuts import render, redirect
+from django.shortcuts import render, get_object_or_404
 from django.views.generic.list import ListView
 from django.views.generic.detail import DetailView
 from django.views.generic.edit import CreateView, UpdateView, DeleteView, FormView
@@ -15,8 +15,10 @@ from django.shortcuts import redirect
 from django.db import transaction
 
 from .models import Task
-from .forms import PositionForm
-
+from .forms import PositionForm, TaskForm
+from django.http import HttpResponse
+from django.views.decorators.http import require_POST
+import json
 
 class CustomLoginView(LoginView):
     template_name = 'todo_app/login.html'
@@ -52,7 +54,7 @@ class TaskList(LoginRequiredMixin, ListView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context['tasks'] = context['tasks'].filter(user=self.request.user)
-        context['count'] = context['tasks'].filter(complete=False).count()
+        #context['count'] = context['tasks'].filter(complete=False).count()
 
         search_input = self.request.GET.get('search-area') or ''
         if search_input:
@@ -79,6 +81,31 @@ class TaskCreate(LoginRequiredMixin, CreateView):
         form.instance.user = self.request.user
         return super(TaskCreate, self).form_valid(form)
 
+def add_task(request):
+    if request.method == "POST":
+        form = TaskForm(request.POST)
+        if form.is_valid():
+            task = Task.objects.create(
+                title=form.cleaned_data.get('title'),
+                description=form.cleaned_data.get('description'),
+                complete=form.cleaned_data.get('complete'),
+                user=request.user
+                )
+            return HttpResponse(status=204, headers={
+                    'HX-Trigger': json.dumps({
+                        "bookListChanged": None,
+                        "showMessage": f"{task.title} added."
+                    })
+                })
+        else:
+            return render(request, 'todo_app/task_modal_form.html', {
+                'form': form,
+            })
+    else:
+        form = TaskForm()
+    return render(request, 'todo_app/task_modal_form.html', {
+        'form': form,
+    })
 
 class TaskUpdate(LoginRequiredMixin, UpdateView):
     model = Task
